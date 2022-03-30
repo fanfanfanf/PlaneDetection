@@ -1,2 +1,4 @@
 ReverseEngineering.pro.user
 **/*.pro.user
+.vscode/
+build/
