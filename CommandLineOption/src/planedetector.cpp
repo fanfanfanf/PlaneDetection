@@ -38,8 +38,10 @@ std::set<Plane*> PlaneDetector::detect()
     }
 
     bool changed;
+    int iter = 0;
     do
     {
+        std::cout << "iter: " << iter++ << std::endl;
         growPatches(patches);
         mergePatches(patches);
         changed = updatePatches(patches);
