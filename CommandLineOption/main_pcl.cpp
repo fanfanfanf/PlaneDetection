@@ -17,6 +17,10 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+// #include <tbb/mutex.h>
+
 void outlier_filter(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_src, 
 					pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered, int search_num = 50)
 {
@@ -79,19 +83,24 @@ int main(int argc, char **argv)
     pointCloud->connectivity(connectivity);
     NormalEstimator3d estimator(&octree, normalsNeighborSize, NormalEstimator3d::QUICK);
     std::cout << pointCloud->size() << std::endl;
-#pragma omp parallel for
-    for (size_t i = 0; i < pointCloud->size(); i++)
-    {
-        if (i % 10000 == 0)
+
+    // tbb::mutex mutex;
+// #pragma omp parallel for
+    // tbb::parallel_for(tbb::blocked_range<size_t>(0, pointCloud->size()), [&](const tbb::blocked_range<size_t> &x) {
+        // for (size_t i = x.begin(); i != x.end(); ++i)
+        for (size_t i = 0; i < pointCloud->size(); i++)
         {
-            std::cout << i / float(pointCloud->size()) * 100 << "%..." << std::endl;
+            if (i % 10000 == 0)
+            {
+                std::cout << i / float(pointCloud->size()) * 100 << "%..." << std::endl;
+            }
+            NormalEstimator3d::Normal normal = estimator.estimate(i);
+            connectivity->addNode(i, normal.neighbors);
+            (*pointCloud)[i].normal(normal.normal);
+            (*pointCloud)[i].normalConfidence(normal.confidence);
+            (*pointCloud)[i].curvature(normal.curvature);
         }
-        NormalEstimator3d::Normal normal = estimator.estimate(i);
-        connectivity->addNode(i, normal.neighbors);
-        (*pointCloud)[i].normal(normal.normal);
-        (*pointCloud)[i].normalConfidence(normal.confidence);
-        (*pointCloud)[i].curvature(normal.curvature);
-    }
+    // });
 
 
     // pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> ne;
