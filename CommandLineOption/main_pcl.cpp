@@ -81,7 +81,15 @@ int main(int argc, char **argv)
     octree.partition(10, 30);
     ConnectivityGraph *connectivity = new ConnectivityGraph(pointCloud->size());
     pointCloud->connectivity(connectivity);
-    NormalEstimator3d estimator(&octree, normalsNeighborSize, NormalEstimator3d::QUICK);
+    
+        nanoflann::PointCloud<double> pointData; 
+        pointData.pts.reserve(pointCloud->size());
+        for (int i = 0; i < pointCloud->size(); ++i) {
+            auto pt = pointCloud->at(i).position();
+            pointData.pts.push_back(nanoflann::PointCloud<double>::PtData(pt[0],pt[1],pt[2]));
+        }
+
+    NormalEstimator3d estimator(&octree, normalsNeighborSize, NormalEstimator3d::QUICK, &pointData);
     std::cout << pointCloud->size() << std::endl;
 
     // tbb::mutex mutex;
@@ -94,7 +102,7 @@ int main(int argc, char **argv)
             {
                 std::cout << i / float(pointCloud->size()) * 100 << "%..." << std::endl;
             }
-            NormalEstimator3d::Normal normal = estimator.estimate(i);
+            NormalEstimator3d::Normal normal = estimator.estimate_nanoflann(i);
             connectivity->addNode(i, normal.neighbors);
             (*pointCloud)[i].normal(normal.normal);
             (*pointCloud)[i].normalConfidence(normal.confidence);

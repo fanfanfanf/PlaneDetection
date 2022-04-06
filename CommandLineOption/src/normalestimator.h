@@ -3,8 +3,12 @@
 
 #include "nearestneighborcalculator.h"
 #include "pcacalculator.h"
+#include "nanoflann.hpp"
+#include "point_cloud_flann.h"
 
 #include <iostream>
+
+// using namespace nanoflann;
 
 // reference article: Outlier detection and robust normal-curvature estimation in mobile laser scanning 3D point cloud data
 // reference article[2]: Fast and Robust Normal Estimation for Point Clouds with Sharp Features
@@ -32,13 +36,16 @@ public:
     };
 
     NormalEstimator(const Partitioner<DIMENSION> *partitioner, size_t numNeighbors,
-                    Speed speed = QUICK, float cutoffDistance = 3.075f)
+                    Speed speed = QUICK,
+                    nanoflann::PointCloud<double> *pointData = nullptr,
+                    float cutoffDistance = 3.075f)
         : mPartitioner(partitioner)
         , mNumNeighbors(numNeighbors)
         , mCutoffDistance(cutoffDistance)
         , mSpeed(speed)
+        , m_index(3, *pointData, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */) )
     {
-
+	    m_index.buildIndex();
     }
 
     const Partitioner<DIMENSION>* partitioner() const
@@ -142,11 +149,65 @@ public:
         return normal;
     }
 
+    Normal estimate_nanoflann(size_t point)
+    {
+        Normal normal;
+        normal.point = point;
+        normal.normal = Vector::Zero();
+        normal.curvature = 0;
+        normal.confidence = 0;
+
+
+		double *query_pt = new double[3];
+        auto pt = mPartitioner->pointCloud()->at(point).position();
+		query_pt[0] = pt[0];  query_pt[1] = pt[1];  query_pt[2] = pt[2];
+		double *dis_temp = new double[mNumNeighbors];
+		size_t *out_indices = new size_t[mNumNeighbors];
+
+		nanoflann::KNNResultSet<double> resultSet(mNumNeighbors);
+		resultSet.init(out_indices, dis_temp );
+		m_index.findNeighbors(resultSet, &query_pt[0], nanoflann::SearchParams(10));
+        for (size_t i = 0; i < resultSet.size(); ++i) {
+            normal.neighbors.push_back(out_indices[i]);
+        }
+
+		delete query_pt;
+		delete dis_temp;
+        delete out_indices;
+
+
+        // if (mPartitioner->pointCloud()->hasConnectivity() && mPartitioner->pointCloud()->connectivity()->neighbors(point).size() >= mNumNeighbors)
+        // {
+        //     const std::vector<size_t> &neighbors = mPartitioner->pointCloud()->connectivity()->neighbors(point);
+        //     normal.neighbors = std::vector<size_t>(neighbors.begin(), neighbors.begin() + mNumNeighbors);
+        // }
+        // else
+        // {
+        //     for (const std::pair<size_t, float> &p : NearestNeighborCalculator<DIMENSION>::kNN(mPartitioner, point, mNumNeighbors))
+        //     {
+        //         normal.neighbors.push_back(p.first);
+        //     }
+        // }
+        switch (mSpeed)
+        {
+        case QUICK:
+            quickEstimation(normal);
+            break;
+        case SLOW:
+            slowEstimation(normal);
+            break;
+        }
+        return normal;
+    }
+
 private:
     const Partitioner<DIMENSION> *mPartitioner;
     size_t mNumNeighbors;
     float mCutoffDistance;
     Speed mSpeed;
+    
+    typedef nanoflann::KDTreeSingleIndexAdaptor< nanoflann::L2_Simple_Adaptor<double, nanoflann::PointCloud<double> >, nanoflann::PointCloud<double>, 3/*dim*/ > my_kd_tree_t;
+    my_kd_tree_t m_index; //(3, pointData, nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */) );
 
     struct DataScatter
     {
