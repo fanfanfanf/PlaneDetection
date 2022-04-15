@@ -17,9 +17,11 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
 
-#include <tbb/parallel_for.h>
-#include <tbb/blocked_range.h>
+// #include <tbb/parallel_for.h>
+// #include <tbb/blocked_range.h>
 // #include <tbb/mutex.h>
+
+#include "LineDetection3D.h"
 
 void outlier_filter(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_src, 
 					pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered, int search_num = 50)
@@ -93,7 +95,7 @@ int main(int argc, char **argv)
     std::cout << pointCloud->size() << std::endl;
 
     // tbb::mutex mutex;
-// #pragma omp parallel for
+#pragma omp parallel for
     // tbb::parallel_for(tbb::blocked_range<size_t>(0, pointCloud->size()), [&](const tbb::blocked_range<size_t> &x) {
         // for (size_t i = x.begin(); i != x.end(); ++i)
         for (size_t i = 0; i < pointCloud->size(); i++)
@@ -144,7 +146,7 @@ int main(int argc, char **argv)
     std::cout << "Detecting planes..." << std::endl;
     PlaneDetector detector(pointCloud);
     detector.minNormalDiff(0.5f);
-    detector.maxDist(0.258819f);
+    detector.maxDist(0.8f);  // 0.258819f
     detector.outlierRatio(0.75f);
 
     std::set<Plane*> planes = detector.detect();
@@ -182,6 +184,15 @@ int main(int argc, char **argv)
         pcl_planes.push_back(plane_points);
     }
 
+	int k = 50;
+	LINEDETECTION3D::LineDetection3D line_detector;
+	std::vector<LINEDETECTION3D::PLANE> planes_out;
+	std::vector<std::vector<cv::Point3d> > lines;
+	std::vector<double> ts;
+    
+	line_detector.run( pcl_planes, k, planes_out, lines, ts );
+
+
     boost::shared_ptr<pcl::visualization::PCLVisualizer> MView(new pcl::visualization::PCLVisualizer("boundary"));
 
     int v1(0);
@@ -207,6 +218,33 @@ int main(int argc, char **argv)
 		// MView->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, 1, 0.2, 1, hull_str, v2);
 		// MView->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, hull_str, v2);
 	}
+
+    // for (auto &plane_v : planes_out) {
+    for (int i = 0; i < planes_out.size(); ++i) {
+        auto &plane_v = planes_out[i];
+        // float R = 1.0*(rand()%1000)/1000;
+        // float G = 1.0*(rand()%1000)/1000;
+        // float B = 1.0*(rand()%1000)/1000;
+        float R = colors[i][0]+0.3;
+        float G = colors[i][1]+0.3;
+        float B = colors[i][2]+0.3;
+        for (auto& lines_v : plane_v.lines3d) {
+            for (auto& line_v : lines_v) {
+                if (line_v.size() != 2) {
+                    cout << "warning: line size:" << line_v.size() << endl;
+                }
+                auto& p1 = line_v[0];
+                auto& p2 = line_v[1];
+                double dist = sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) + (p1.z - p2.z)*(p1.z - p2.z));
+                cout << "dist: " << dist << endl;
+                string rand_str = to_string(rand());
+                MView->addLine(pcl::PointXYZ(p1.x,p1.y,p1.z), pcl::PointXYZ(p2.x,p2.y,p2.z), R, G, B, rand_str, v2);
+                MView->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, rand_str, v2);
+                // break;
+            }
+            // break;
+        }
+    }
 
     MView->spin();
 

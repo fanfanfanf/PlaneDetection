@@ -25,8 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *************************************************************************/
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef _NANOFLANN_POINTCLOUD_H_
+#define _NANOFLANN_POINTCLOUD_H_
 #pragma once
 
 #include <cstdlib>
