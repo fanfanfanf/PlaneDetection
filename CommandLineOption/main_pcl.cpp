@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     // std::string inputFileName(argv[1]);
     // std::string outputFileName(argv[2]);
 
-    std::string inputFileName("/home/fan/code/3d/data/middel_150_1.pcd");
+    std::string inputFileName("/home/fan/code/3d/data/later-N3-50_1.pcd");
     std::string outputFileName("/home/fan/code/3d/data/middel_150_1");
 
     std::cout << "Reading the point cloud..." << std::endl;
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     std::cout << "Detecting planes..." << std::endl;
     PlaneDetector detector(pointCloud);
     detector.minNormalDiff(0.5f);
-    detector.maxDist(0.8f);  // 0.258819f
+    detector.maxDist(0.258819f);  // 0.258819f
     detector.outlierRatio(0.75f);
 
     std::set<Plane*> planes = detector.detect();
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
     boost::shared_ptr<pcl::visualization::PCLVisualizer> MView(new pcl::visualization::PCLVisualizer("boundary"));
 
     int v1(0);
-    MView->createViewPort(0.0, 0.0, 0.5, 1.0, v1);
+    MView->createViewPort(0.0, 0.5, 1.0, 1.0, v1);
     MView->setBackgroundColor(0.3, 0.3, 0.3, v1);
     MView->addText("Raw point clouds", 10, 10, "v1_text", v1);
     MView->addPointCloud<pcl::PointXYZ>(cloud_src, "sample cloud", v1);
@@ -204,10 +204,10 @@ int main(int argc, char **argv)
 
 	double colors[][3] = {{0, 0.5, 0}, {0, 0, 0.5}, {0.5, 0, 0}, {0.5, 0.5, 0}, {0.5, 0, 0.5}, {0, 0.5, 0.5},
                           {0.2, 0.5, 0.7}, {0.7, 0.5, 0.2}, {0.5, 0.2, 0.7}, {0.5, 0.7, 0.2}, {0.2, 0.7, 0.5}, {0.7, 0.2, 0.5}};
-    int v2(1);
-    MView->createViewPort(0.5, 0.0, 1, 1.0, v2);
+    int v2(0);
+    MView->createViewPort(0.0, 0.0, 0.5, 0.5, v2);
     MView->setBackgroundColor(0.5, 0.5, 0.5, v2);
-    MView->addText("Boudary point clouds", 80, 80, "v2_text", v2);
+    MView->addText("Segment point clouds", 10, 10, "v2_text", v2);
 
 	for (int i = 0; i < pcl_planes.size(); ++i) {
 		std::string plane_str = std::string("plane_") + std::to_string(i);
@@ -219,6 +219,10 @@ int main(int argc, char **argv)
 		// MView->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, hull_str, v2);
 	}
 
+    int v3(0);
+    MView->createViewPort(0.5, 0.0, 1.0, 0.5, v3);
+    MView->setBackgroundColor(0.4, 0.4, 0.4, v3);
+    MView->addText("Boudary point clouds", 10, 10, "v3_text", v3);
     // for (auto &plane_v : planes_out) {
     for (int i = 0; i < planes_out.size(); ++i) {
         auto &plane_v = planes_out[i];
@@ -238,8 +242,8 @@ int main(int argc, char **argv)
                 double dist = sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) + (p1.z - p2.z)*(p1.z - p2.z));
                 cout << "dist: " << dist << endl;
                 string rand_str = to_string(rand());
-                MView->addLine(pcl::PointXYZ(p1.x,p1.y,p1.z), pcl::PointXYZ(p2.x,p2.y,p2.z), R, G, B, rand_str, v2);
-                MView->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 3, rand_str, v2);
+                MView->addLine(pcl::PointXYZ(p1.x,p1.y,p1.z), pcl::PointXYZ(p2.x,p2.y,p2.z), R, G, B, rand_str, v3);
+                MView->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 2, rand_str, v3);
                 // break;
             }
             // break;
