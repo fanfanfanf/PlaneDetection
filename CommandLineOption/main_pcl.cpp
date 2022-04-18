@@ -16,6 +16,7 @@
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
+#include <pcl/surface/concave_hull.h>
 
 // #include <tbb/parallel_for.h>
 // #include <tbb/blocked_range.h>
@@ -196,7 +197,7 @@ int main(int argc, char **argv)
     boost::shared_ptr<pcl::visualization::PCLVisualizer> MView(new pcl::visualization::PCLVisualizer("boundary"));
 
     int v1(0);
-    MView->createViewPort(0.0, 0.5, 1.0, 1.0, v1);
+    MView->createViewPort(0.0, 0.5, 0.5, 1.0, v1);
     MView->setBackgroundColor(0.3, 0.3, 0.3, v1);
     MView->addText("Raw point clouds", 10, 10, "v1_text", v1);
     MView->addPointCloud<pcl::PointXYZ>(cloud_src, "sample cloud", v1);
@@ -219,11 +220,29 @@ int main(int argc, char **argv)
 		// MView->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, hull_str, v2);
 	}
 
+
     int v3(0);
-    MView->createViewPort(0.5, 0.0, 1.0, 0.5, v3);
-    MView->setBackgroundColor(0.4, 0.4, 0.4, v3);
+    MView->createViewPort(0.5, 0.5, 1.0, 1.0, v3);
+    MView->setBackgroundColor(0.45, 0.45, 0.45, v3);
     MView->addText("Boudary point clouds", 10, 10, "v3_text", v3);
-    // for (auto &plane_v : planes_out) {
+
+	for (int i = 0; i < pcl_planes.size(); ++i) {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::ConcaveHull<pcl::PointXYZ> hull;
+        hull.setInputCloud (pcl_planes[i]);  // 注意这里，输入点云是平面内点的点云
+        hull.setAlpha(4);
+        hull.reconstruct (*cloud_hull);  // 这一步就把平面内点的外接凹多边形创建出来了
+		std::string plane_str = std::string("plane_") + std::to_string(i);
+		std::string hull_str = std::string("hull_") + std::to_string(i);
+		MView->addPointCloud<pcl::PointXYZ>(cloud_hull, hull_str, v3);
+		MView->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_COLOR, colors[i][0], colors[i][1], colors[i][2], hull_str, v3);
+	}
+
+    int v4(0);
+    MView->createViewPort(0.5, 0.0, 1.0, 0.5, v4);
+    MView->setBackgroundColor(0.4, 0.4, 0.4, v4);
+    MView->addText("Boudary point clouds", 10, 10, "v4_text", v4);
+
     for (int i = 0; i < planes_out.size(); ++i) {
         auto &plane_v = planes_out[i];
         // float R = 1.0*(rand()%1000)/1000;
@@ -242,11 +261,9 @@ int main(int argc, char **argv)
                 double dist = sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y) + (p1.z - p2.z)*(p1.z - p2.z));
                 cout << "dist: " << dist << endl;
                 string rand_str = to_string(rand());
-                MView->addLine(pcl::PointXYZ(p1.x,p1.y,p1.z), pcl::PointXYZ(p2.x,p2.y,p2.z), R, G, B, rand_str, v3);
-                MView->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 2, rand_str, v3);
-                // break;
+                MView->addLine(pcl::PointXYZ(p1.x,p1.y,p1.z), pcl::PointXYZ(p2.x,p2.y,p2.z), R, G, B, rand_str, v4);
+                MView->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 2, rand_str, v4);
             }
-            // break;
         }
     }
 
